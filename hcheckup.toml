@@ -1,0 +1,15 @@
+# healthchecks.io URL
+hc_ping_url = "https://hc-ping.com/Md1lpdGyeLIN0J2KNdBjfw/palacesecurity-pc"
+
+# For testing, simulates a 504 Gateway Timeout
+#hc_ping_url = "https://httpstat.us/504?sleep=60000"
+
+mail_from = "palace.hoa.alerts@gmail.com"
+mail_to = "palace.hoa.alerts@gmail.com"
+
+[smtp]
+# SMTP Connection
+server = "smtp.gmail.com"
+port = 587
+user = "palace.hoa.alerts@gmail.com"
+# Set password: keyring set smtp <user>
