@@ -101,14 +101,16 @@ def ping(url: str, msg: str = "") -> None:
     """
     logger.info(f'Sending ping to {url} data="{msg}" ...')
     timeouts = (5, 10, 15)
-    for timeout in timeouts:
+    for i, timeout in enumerate(timeouts, 1):
         try:
             response = requests.post(url, timeout=timeout, data=msg)
             response.raise_for_status()  # Raise an exception for bad status codes (4xx, 5xx)
             logger.info(f"Ping to {url} successful.")
             return
         except requests.exceptions.Timeout:
-            logger.info(f"Ping to {url} timed out after {timeout}s, retrying ...")
+            msg = (f"Ping to {url} timed out after {timeout}s"
+                   + ("." if i == len(timeouts) else ", retrying ..."))
+            logger.info(msg)
     raise requests.exceptions.Timeout(f"Ping to {url} timed out after {len(timeouts)} attempts")
 
 
@@ -209,7 +211,9 @@ def main() -> None:
 
         send_mail(
             "healthchecks.io ping failure",
-            f"Ping to {hc_ping_url} failed: {e}, false alerts possible.",
+            f"Ping to {hc_ping_url} failed:\n"
+            f'"{e}"\n\n'
+            f"Email via {smtp_config["server"]} OK; expect false alerts.",
             config_data["mail_to"],
             config_data["mail_from"],
             smtp_config,
