@@ -32,7 +32,7 @@ sys.path.append(str(SCRIPT_DIR))
 # pylint: disable=wrong-import-position
 from __init__ import __version__  # pylint: disable=no-name-in-module
 import keyring
-from platformdirs import user_config_dir, user_log_dir
+from platformdirs import user_config_dir, user_data_dir, user_log_dir
 import requests  # type: ignore
 
 # pylint: enable=wrong-import-position
@@ -152,13 +152,16 @@ def main() -> None:
     logger.info(f'{"=" * 60}')
     logger.info(f"{SCRIPT_NAME} version {__version__} starting ...")
 
-    config_file: Path = (
-        Path(user_config_dir("hcheckup", appauthor=False, roaming=True)) / "hcheckup.toml"
-    )
+    config_dir: Path = Path(user_config_dir("hcheckup", appauthor=False, roaming=True))
+    """Configuration directory"""
+    config_file: Path = config_dir / "hcheckup.toml"
     """User-specific configuration file."""
-
     config_data: dict[str, Any]
     """Data from hcheckup.toml file."""
+    alert_sent_file: Path = (
+        Path(user_data_dir("hcheckup", appauthor=False, ensure_exists=True)) / "alert_sent"
+    )
+    """File exists if alert email sent."""
 
     if not config_file.exists():
         raise FileNotFoundError(f'Configuration file not found: "{config_file}"')
@@ -195,8 +198,15 @@ def main() -> None:
 
     try:
         ping(hc_ping_url)
+        # Ping successful: remove alert flag file if it exists
+        if alert_sent_file.exists():
+            alert_sent_file.unlink()
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error(f"Failed to ping {hc_ping_url}: {e}")
+        if alert_sent_file.exists():
+            logger.info("Alert email already sent, skipping.")
+            raise
+
         send_mail(
             "healthchecks.io ping failure",
             f"Ping to {hc_ping_url} failed: {e}, false alerts possible.",
@@ -204,6 +214,7 @@ def main() -> None:
             config_data["mail_from"],
             smtp_config,
         )
+        alert_sent_file.touch()  # Create zero-length file to indicate alert sent
         raise
 
     exit_with_status(0)
